@@ -5,10 +5,13 @@ class Order < ApplicationRecord
   accepts_nested_attributes_for :ordered_lists
 
   def update_total_quantity
-    self.ordered_lists.each do |line_item|
-      item = Item.find_by(id: line_item.item_id)
-      item.total_quantity += line_item.quantity
-      item.save!
+    ActiveRecord::Base.transaction do
+      self.ordered_lists.each do |line_item|
+        item = Item.lock.find_by(id: line_item.item_id)
+        item.total_quantity += line_item.quantity
+        item.save!
+      end
     end
   end
 end
+# selfにはorderが入ってくる。orderに対してロックをかける。with_lock。信号機の順番待ちのイメージ。普通のtransaction lockはホテルとかの客室の予約みたいなイメージ。
